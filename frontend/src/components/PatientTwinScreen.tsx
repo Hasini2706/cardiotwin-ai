@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Activity, Clock, RefreshCw } from "lucide-react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
+import { ChevronDown, ChevronRight, Activity, RefreshCw } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import type { PatientEHR, WearableReading, PredictionRecord, PatientSummary } from "../types/api";
 import { apiService } from "../services/api";
 
@@ -40,7 +32,7 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
       try {
         const [profileRes, wearRes] = await Promise.all([
           apiService.getPatientProfile(selectedPatientId),
-          apiService.getPatientWearables(selectedPatientId, 32),
+          apiService.getPatientWearables(selectedPatientId, 25),
         ]);
         if (isMounted) {
           setEhr(profileRes.patient);
@@ -64,16 +56,15 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
   const riskColor = rfProb >= 0.65 ? "#F87171" : rfProb >= 0.30 ? "#FBBF24" : "#21D4C2";
   const badgeClass =
     rfProb >= 0.65
-      ? "bg-rose-500/10 text-rose-300 border-rose-500/25"
+      ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
       : rfProb >= 0.30
-      ? "bg-amber-500/10 text-amber-300 border-amber-500/25"
-      : "bg-[#21D4C2]/10 text-[#21D4C2] border-[#21D4C2]/25";
+      ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+      : "bg-teal-500/10 text-teal-300 border-teal-500/30";
 
   const chartData = readings.map((r) => {
     const d = new Date(r.timestamp);
-    const timeStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, "0")}:00`;
     return {
-      time: timeStr,
+      time: `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, "0")}:00`,
       heartRate: r.heart_rate_bpm,
       hrv: r.hrv_rmssd_ms,
       sleep: r.sleep_hours,
@@ -83,96 +74,85 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
 
   const metricConfig = {
     heartRate: { name: "Heart Rate", unit: "bpm", color: "#F87171", dataKey: "heartRate" },
-    hrv: { name: "HRV (RMSSD)", unit: "ms", color: "#21D4C2", dataKey: "hrv" },
-    sleep: { name: "Sleep Duration", unit: "hrs", color: "#818CF8", dataKey: "sleep" },
-    steps: { name: "Activity Steps", unit: "steps", color: "#38BDF8", dataKey: "steps" },
+    hrv: { name: "HRV", unit: "ms", color: "#21D4C2", dataKey: "hrv" },
+    sleep: { name: "Sleep", unit: "hrs", color: "#818CF8", dataKey: "sleep" },
+    steps: { name: "Steps", unit: "steps", color: "#38BDF8", dataKey: "steps" },
   }[selectedMetric];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Patient Summary Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#101827] border border-[#263449] rounded-xl p-4 sm:p-5 shadow-sm">
+    <div className="space-y-5 max-w-4xl mx-auto">
+      {/* Patient Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#101827] border border-[#263449] rounded-xl p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#141F30] border border-[#263449] flex items-center justify-center text-[#21D4C2] shrink-0">
-            <Activity className="w-4 h-4" />
+          <div className="relative">
+            <select
+              value={selectedPatientId}
+              onChange={(e) => onSelectPatient(e.target.value)}
+              className="appearance-none bg-[#141F30] border border-[#263449] rounded-md pl-3 pr-8 py-1 text-xs font-semibold text-white focus:outline-none focus:border-[#21D4C2] cursor-pointer"
+            >
+              {patients.map((p) => (
+                <option key={p.patient_id} value={p.patient_id}>
+                  {p.patient_id}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <select
-                  value={selectedPatientId}
-                  onChange={(e) => onSelectPatient(e.target.value)}
-                  className="appearance-none bg-[#141F30] border border-[#263449] rounded-md pl-2.5 pr-7 py-1 text-xs font-semibold text-white focus:outline-none focus:border-[#21D4C2] cursor-pointer"
-                >
-                  {patients.map((p) => (
-                    <option key={p.patient_id} value={p.patient_id}>
-                      {p.patient_id}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-              <span className="text-xs text-slate-300">
-                Age <strong className="text-white font-medium">{ehr?.age ?? "--"}</strong> • {ehr?.sex ?? "--"} • BMI {ehr?.bmi ?? "--"}
-              </span>
-            </div>
-          </div>
+          <span className="text-xs text-slate-300">
+            {ehr?.age} yrs • {ehr?.sex} • BMI {ehr?.bmi}
+          </span>
         </div>
 
         <button
           onClick={() => onNavigateTab("simulation")}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#21D4C2] hover:bg-[#1dbfae] text-slate-950 font-semibold text-xs transition-colors shrink-0 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#21D4C2] hover:bg-[#1dbfae] text-slate-950 font-semibold text-xs transition-colors shrink-0"
         >
           <Activity className="w-3.5 h-3.5" />
-          <span>Simulate Telemetry Update</span>
+          <span>Simulate New Reading</span>
         </button>
       </div>
 
       {loading ? (
-        <div className="p-16 text-center text-xs text-slate-500 bg-[#101827] border border-[#263449] rounded-xl">
-          <RefreshCw className="w-5 h-5 animate-spin text-[#21D4C2] mx-auto mb-2" />
+        <div className="p-12 text-center text-xs text-slate-500 bg-[#101827] border border-[#263449] rounded-xl">
+          <RefreshCw className="w-4 h-4 animate-spin text-[#21D4C2] mx-auto mb-2" />
           Loading patient digital twin...
         </div>
       ) : (
         <>
-          {/* Current Experimental Model Output & Feature Contributors */}
-          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 sm:p-6 space-y-5 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[#263449]/70">
+          {/* Risk Score & Model Explanation Card */}
+          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#263449]/70">
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium block">
-                  Current Experimental Model Output
-                </span>
-                <div className="flex items-baseline gap-2.5 mt-1">
-                  <span className="text-3xl font-bold font-mono tracking-tight" style={{ color: riskColor }}>
+                <span className="text-[11px] text-slate-400 block font-medium">Experimental Risk Score</span>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-2xl font-bold font-mono" style={{ color: riskColor }}>
                     {Math.round(rfProb * 100)}%
                   </span>
-                  <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium border ${badgeClass}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium border ${badgeClass}`}>
                     {riskCategory} Risk
                   </span>
                 </div>
               </div>
 
               <p className="text-xs text-slate-400 max-w-sm">
-                Estimated probability of 24-hour deterioration proxy based on joint fusion of baseline clinical history and continuous wearable streams.
+                Estimated probability of 24-hour deterioration proxy based on baseline EHR and wearables.
               </p>
             </div>
 
-            {/* Carefully Worded Feature Attribution */}
+            {/* Contributing Factors */}
             <div>
-              <span className="text-xs font-semibold text-white tracking-tight block mb-2.5">
-                Key Factors Associated with Current Output
+              <span className="text-xs font-semibold text-white block mb-2">
+                Factors Associated with Model Output:
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {prediction?.top_contributing_features?.slice(0, 4).map((f, i) => (
                   <div
                     key={i}
-                    className="p-3 rounded-lg bg-[#141F30] border border-[#263449] flex items-center justify-between"
+                    className="p-2.5 rounded-lg bg-[#141F30] border border-[#263449] flex items-center justify-between"
                   >
                     <div>
                       <span className="text-slate-200 block text-xs font-medium">{f.label}</span>
-                      <span className="text-[11px] text-slate-400 font-mono mt-0.5 block">
-                        Value: {f.current_value}
-                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">Value: {f.current_value}</span>
                     </div>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
@@ -189,76 +169,69 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
             </div>
           </div>
 
-          {/* Historical Health Information (Collapsible) */}
-          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 sm:p-6 space-y-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-white tracking-tight">Historical Clinical Record (EHR)</h2>
+          {/* Historical Health Information */}
+          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 space-y-3 shadow-sm">
+            <h2 className="text-xs font-semibold text-white">Historical Health Information</h2>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-[#141F30] border border-[#263449]">
-                <span className="text-slate-400 block text-[11px]">Baseline Blood Pressure</span>
-                <span className="font-semibold text-white font-mono mt-1 block">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div className="p-2.5 rounded-lg bg-[#141F30] border border-[#263449]">
+                <span className="text-slate-400 block text-[11px]">Blood Pressure</span>
+                <span className="font-semibold text-white font-mono mt-0.5 block">
                   {ehr?.baseline_systolic_bp}/{ehr?.baseline_diastolic_bp} mmHg
                 </span>
               </div>
-              <div className="p-3 rounded-lg bg-[#141F30] border border-[#263449]">
-                <span className="text-slate-400 block text-[11px]">Hypertension History</span>
-                <span className="font-semibold text-white mt-1 block">
+              <div className="p-2.5 rounded-lg bg-[#141F30] border border-[#263449]">
+                <span className="text-slate-400 block text-[11px]">Hypertension</span>
+                <span className="font-semibold text-white mt-0.5 block">
                   {ehr?.hypertension ? "Diagnosed" : "None"}
                 </span>
               </div>
-              <div className="p-3 rounded-lg bg-[#141F30] border border-[#263449]">
+              <div className="p-2.5 rounded-lg bg-[#141F30] border border-[#263449]">
                 <span className="text-slate-400 block text-[11px]">Type 2 Diabetes</span>
-                <span className="font-semibold text-white mt-1 block">
+                <span className="font-semibold text-white mt-0.5 block">
                   {ehr?.diabetes ? "Diagnosed" : "None"}
                 </span>
               </div>
-              <div className="p-3 rounded-lg bg-[#141F30] border border-[#263449]">
+              <div className="p-2.5 rounded-lg bg-[#141F30] border border-[#263449]">
                 <span className="text-slate-400 block text-[11px]">Smoking Status</span>
-                <span className="font-semibold text-white mt-1 block">
+                <span className="font-semibold text-white mt-0.5 block">
                   {ehr?.smoking_status}
                 </span>
               </div>
             </div>
 
-            {/* Collapsible Accordion for Labs & Provenance */}
+            {/* Expandable Labs */}
             <details className="group pt-2 border-t border-[#263449]/70">
-              <summary className="cursor-pointer text-xs font-medium text-[#21D4C2] hover:text-[#1dbfae] flex items-center gap-1.5 py-1.5 transition-colors select-none">
+              <summary className="cursor-pointer text-xs font-medium text-[#21D4C2] hover:underline flex items-center gap-1.5 py-1">
                 <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
-                <span>Show Additional Clinical Labs & Data Provenance</span>
+                <span>Show Clinical Labs</span>
               </summary>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 text-xs">
-                <div className="p-2.5 rounded-lg bg-[#141F30]/70 border border-[#263449]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 text-xs">
+                <div className="p-2 rounded bg-[#141F30]">
                   <span className="text-slate-400 block text-[10px]">LDL Cholesterol</span>
-                  <span className="font-mono text-slate-200 mt-0.5 block">{ehr?.ldl_mg_dl} mg/dL</span>
+                  <span className="font-mono text-slate-200">{ehr?.ldl_mg_dl} mg/dL</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#141F30]/70 border border-[#263449]">
+                <div className="p-2 rounded bg-[#141F30]">
                   <span className="text-slate-400 block text-[10px]">HDL Cholesterol</span>
-                  <span className="font-mono text-slate-200 mt-0.5 block">{ehr?.hdl_mg_dl} mg/dL</span>
+                  <span className="font-mono text-slate-200">{ehr?.hdl_mg_dl} mg/dL</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#141F30]/70 border border-[#263449]">
+                <div className="p-2 rounded bg-[#141F30]">
                   <span className="text-slate-400 block text-[10px]">eGFR Filtration</span>
-                  <span className="font-mono text-slate-200 mt-0.5 block">{ehr?.egfr_ml_min} mL/min</span>
+                  <span className="font-mono text-slate-200">{ehr?.egfr_ml_min} mL/min</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#141F30]/70 border border-[#263449]">
+                <div className="p-2 rounded bg-[#141F30]">
                   <span className="text-slate-400 block text-[10px]">Fasting Glucose</span>
-                  <span className="font-mono text-slate-200 mt-0.5 block">{ehr?.fasting_glucose_mg_dl} mg/dL</span>
-                </div>
-                <div className="col-span-2 sm:col-span-4 p-2.5 rounded-lg bg-[#141F30]/70 border border-[#263449] text-[11px] text-slate-400">
-                  Data Provenance: <span className="font-mono text-slate-300">{ehr?.data_provenance}</span>
+                  <span className="font-mono text-slate-200">{ehr?.fasting_glucose_mg_dl} mg/dL</span>
                 </div>
               </div>
             </details>
           </div>
 
-          {/* Wearable History Chart */}
-          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 sm:p-6 space-y-4 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-white tracking-tight">Wearable Telemetry History</h2>
-                <p className="text-[11px] text-slate-400">Time-series signals fed into the feature engineer</p>
-              </div>
+          {/* Wearable Trend Chart */}
+          <div className="bg-[#101827] border border-[#263449] rounded-xl p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold text-white">Wearable Telemetry Stream</h2>
 
-              {/* Selector */}
               <div className="inline-flex rounded-lg bg-[#141F30] p-0.5 border border-[#263449] text-xs">
                 {(["heartRate", "hrv", "sleep", "steps"] as MetricType[]).map((m) => {
                   const labels = { heartRate: "Heart Rate", hrv: "HRV", sleep: "Sleep", steps: "Steps" };
@@ -268,9 +241,7 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
                       key={m}
                       onClick={() => setSelectedMetric(m)}
                       className={`px-2.5 py-1 rounded transition-colors ${
-                        isSelected
-                          ? "bg-[#101827] text-[#21D4C2] font-medium border border-[#263449]"
-                          : "text-slate-400 hover:text-slate-200"
+                        isSelected ? "bg-[#101827] text-[#21D4C2] font-medium border border-[#263449]" : "text-slate-400 hover:text-slate-200"
                       }`}
                     >
                       {labels[m]}
@@ -280,15 +251,9 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
               </div>
             </div>
 
-            <div className="h-60 w-full pt-2">
+            <div className="h-52 w-full pt-1">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="patientAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={metricConfig.color} stopOpacity={0.18} />
-                      <stop offset="95%" stopColor={metricConfig.color} stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="time" stroke="#64748B" fontSize={10} tickLine={false} />
                   <YAxis stroke="#64748B" fontSize={10} tickLine={false} domain={["auto", "auto"]} />
@@ -296,22 +261,20 @@ export const PatientTwinScreen: React.FC<PatientTwinScreenProps> = ({
                     contentStyle={{
                       backgroundColor: "#101827",
                       borderColor: "#263449",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                      borderRadius: "6px",
                       fontSize: "12px",
                     }}
                     formatter={(val: any) => [`${val} ${metricConfig.unit}`, metricConfig.name]}
                   />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey={metricConfig.dataKey}
                     stroke={metricConfig.color}
                     strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#patientAreaGrad)"
-                    activeDot={{ r: 4, fill: metricConfig.color, stroke: "#101827", strokeWidth: 2 }}
+                    dot={false}
+                    activeDot={{ r: 4 }}
                   />
-                </AreaChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
