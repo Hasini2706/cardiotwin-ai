@@ -1,0 +1,167 @@
+{
+  "metadata": {
+    "evaluation_date": "2026-10-20T19:06:50.175234",
+    "target_horizon": "24 hours synthetic cardiovascular deterioration proxy",
+    "train_samples": 4440,
+    "test_samples": 1110,
+    "train_patient_count": 40,
+    "test_patient_count": 10,
+    "test_patients": [
+      "PT-1014",
+      "PT-1018",
+      "PT-1020",
+      "PT-1026",
+      "PT-1027",
+      "PT-1031",
+      "PT-1033",
+      "PT-1040",
+      "PT-1046",
+      "PT-1049"
+    ],
+    "test_class_prevalence": 0.4297297297297297
+  },
+  "models": {
+    "Logistic Regression (Baseline)": {
+      "roc_auc": 0.8217,
+      "average_precision": 0.8233,
+      "precision": 0.5551,
+      "recall": 0.8553,
+      "f1_score": 0.6733,
+      "accuracy": 0.6432,
+      "brier_score": 0.2373,
+      "confusion_matrix": {
+        "true_negative": 306,
+        "false_positive": 327,
+        "false_negative": 69,
+        "true_positive": 408
+      }
+    },
+    "Random Forest (Comparison)": {
+      "roc_auc": 0.9367,
+      "average_precision": 0.8939,
+      "precision": 0.7466,
+      "recall": 0.9329,
+      "f1_score": 0.8295,
+      "accuracy": 0.8351,
+      "brier_score": 0.1221,
+      "confusion_matrix": {
+        "true_negative": 482,
+        "false_positive": 151,
+        "false_negative": 32,
+        "true_positive": 445
+      }
+    }
+  },
+  "feature_importances": [
+    {
+      "feature": "roll_hrv_min_24h",
+      "friendly_name": "Rolling 24h Min HRV (ms)",
+      "importance": 0.2049
+    },
+    {
+      "feature": "roll_hrv_mean_24h",
+      "friendly_name": "Rolling 24h Mean HRV (ms)",
+      "importance": 0.1985
+    },
+    {
+      "feature": "roll_hrv_mean_6h",
+      "friendly_name": "Rolling 6h Mean HRV (ms)",
+      "importance": 0.1122
+    },
+    {
+      "feature": "hrv_filled",
+      "friendly_name": "Current HRV RMSSD (ms)",
+      "importance": 0.1054
+    },
+    {
+      "feature": "age",
+      "friendly_name": "Patient Age (years)",
+      "importance": 0.0727
+    },
+    {
+      "feature": "egfr_ml_min",
+      "friendly_name": "eGFR Renal Filtration (mL/min)",
+      "importance": 0.0535
+    },
+    {
+      "feature": "sleep_hours",
+      "friendly_name": "Nocturnal Sleep (hours)",
+      "importance": 0.0421
+    },
+    {
+      "feature": "sleep_deficit",
+      "friendly_name": "Cumulative Sleep Deficit (hours)",
+      "importance": 0.0373
+    },
+    {
+      "feature": "diabetes",
+      "friendly_name": "Type 2 Diabetes History",
+      "importance": 0.0269
+    },
+    {
+      "feature": "roll_steps_24h",
+      "friendly_name": "Rolling 24h Total Steps",
+      "importance": 0.0218
+    },
+    {
+      "feature": "roll_hr_mean_24h",
+      "friendly_name": "Rolling 24h Mean HR (bpm)",
+      "importance": 0.021
+    },
+    {
+      "feature": "baseline_diastolic_bp",
+      "friendly_name": "Baseline Diastolic BP (mmHg)",
+      "importance": 0.0187
+    },
+    {
+      "feature": "cardiac_workload_index",
+      "friendly_name": "Myocardial Rate-Pressure Index",
+      "importance": 0.0132
+    },
+    {
+      "feature": "baseline_systolic_bp",
+      "friendly_name": "Baseline Systolic BP (mmHg)",
+      "importance": 0.012
+    },
+    {
+      "feature": "bmi",
+      "friendly_name": "Body Mass Index (BMI)",
+      "importance": 0.0119
+    },
+    {
+      "feature": "roll_hr_mean_6h",
+      "friendly_name": "Rolling 6h Mean HR (bpm)",
+      "importance": 0.0114
+    },
+    {
+      "feature": "steps_interval",
+      "friendly_name": "Recent Steps (3h block)",
+      "importance": 0.0095
+    },
+    {
+      "feature": "hr_filled",
+      "friendly_name": "Current Heart Rate (bpm)",
+      "importance": 0.0073
+    },
+    {
+      "feature": "hrv_trend_24h",
+      "friendly_name": "24h Autonomic Drift (HRV delta)",
+      "importance": 0.0062
+    },
+    {
+      "feature": "hypertension",
+      "friendly_name": "Hypertension History",
+      "importance": 0.006
+    },
+    {
+      "feature": "ldl_mg_dl",
+      "friendly_name": "Serum LDL Cholesterol (mg/dL)",
+      "importance": 0.0059
+    },
+    {
+      "feature": "prior_cardiac_event",
+      "friendly_name": "Prior Cardiac Event",
+      "importance": 0.0015
+    }
+  ]
+}
