@@ -86,13 +86,7 @@ export function App() {
 
       </main>
 
-      {/* Clean Footer */}
-      <footer className="mt-auto border-t border-slate-800/60 bg-[#070D1B] py-4 text-xs text-slate-500">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>CardioTwin AI • Digital Twin Challenge 2026 (Happiest Health)</span>
-          <span>Madabattula Tejo Hasini • Aditya University</span>
-        </div>
-      </footer>
+
     </div>
   );
 }
