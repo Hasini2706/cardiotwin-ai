@@ -3,7 +3,6 @@ import { Navbar } from "./components/Navbar";
 import { OverviewScreen } from "./components/OverviewScreen";
 import { PatientTwinScreen } from "./components/PatientTwinScreen";
 import { LiveSimulationScreen } from "./components/LiveSimulationScreen";
-import { AboutScreen } from "./components/AboutScreen";
 import type { PatientSummary } from "./types/api";
 import { apiService } from "./services/api";
 import { AlertTriangle } from "lucide-react";
@@ -85,9 +84,6 @@ export function App() {
           />
         )}
 
-        {activeTab === "about" && (
-          <AboutScreen />
-        )}
       </main>
 
       {/* Clean Footer */}
