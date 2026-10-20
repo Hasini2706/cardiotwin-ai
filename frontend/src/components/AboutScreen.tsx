@@ -1,168 +1,256 @@
-import React from "react";
-import { 
-  Building2, 
-  User, 
-  Mail, 
-  Award, 
-  FileText, 
-  ShieldCheck, 
-  Lock, 
-  Cpu, 
-  ExternalLink,
-  BookOpen,
-  CheckCircle2,
-  AlertTriangle
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Mail, ShieldCheck, CheckCircle2, AlertTriangle, FileText, BarChart3, Database } from "lucide-react";
+import type { EvaluationReport } from "../types/api";
+import { apiService } from "../services/api";
 
 export const AboutScreen: React.FC = () => {
+  const [subSection, setSubSection] = useState<"about" | "evaluation" | "explainability">("about");
+  const [report, setReport] = useState<EvaluationReport | null>(null);
+
+  useEffect(() => {
+    async function loadMetrics() {
+      try {
+        const data = await apiService.getEvaluationMetrics();
+        setReport(data);
+      } catch (err) {
+        console.error("Failed to load evaluation metrics", err);
+      }
+    }
+    loadMetrics();
+  }, []);
+
+  const lr = report?.models["Logistic Regression (Baseline)"];
+  const rf = report?.models["Random Forest (Comparison)"];
+
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="glass-panel p-6 border-slate-700/80 bg-gradient-to-br from-slate-900 via-slate-900/90 to-teal-950/40 relative overflow-hidden">
-        <div className="max-w-3xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold">
-            <Award className="w-3.5 h-3.5" />
-            Competition Submission Details • Digital Twin Challenge 2026
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            About CardioTwin AI & Methodology
-          </h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            CardioTwin AI was conceived and implemented as a rigorous proof-of-concept for the <strong>Digital Twin Challenge 2026</strong> organized by <strong>Happiest Health</strong>.
-          </p>
-        </div>
-      </div>
-
-      {/* Team & Institution Credentials */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-panel p-5 border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-teal-400 font-semibold text-xs">
-            <User className="w-4 h-4" />
-            <span>Author & Student Researcher</span>
-          </div>
-          <h4 className="text-base font-bold text-white">Madabattula Tejo Hasini</h4>
-          <p className="text-xs text-slate-400">Team Size: One Student (Solo Entry)</p>
-          <div className="pt-2 flex items-center gap-1.5 text-xs text-slate-300">
-            <Mail className="w-3.5 h-3.5 text-teal-400" />
-            <a href="mailto:24b11ai223@adityauniversity.in" className="hover:text-teal-300 underline font-mono text-[11px]">
-              24b11ai223@adityauniversity.in
-            </a>
-          </div>
-        </div>
-
-        <div className="glass-panel p-5 border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs">
-            <Building2 className="w-4 h-4" />
-            <span>Academic Institution</span>
-          </div>
-          <h4 className="text-base font-bold text-white">Aditya University</h4>
-          <p className="text-xs text-slate-400">Department of Artificial Intelligence</p>
-          <p className="text-[11px] text-slate-500 mt-1">Andhra Pradesh, India</p>
-        </div>
-
-        <div className="glass-panel p-5 border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
-            <Award className="w-4 h-4" />
-            <span>Organizer & Hackathon</span>
-          </div>
-          <h4 className="text-base font-bold text-white">Digital Twin Challenge 2026</h4>
-          <p className="text-xs text-slate-400">Organizer: Happiest Health</p>
-          <p className="text-[11px] text-slate-500 mt-1">Track: Healthcare Digital Twins</p>
-        </div>
-      </div>
-
-      {/* Digital Twin Conceptual Definition */}
-      <div className="glass-panel p-6 border-slate-800 space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <Cpu className="w-5 h-5 text-teal-400" />
-          <span>What is a Cardiovascular Digital Twin?</span>
-        </h3>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          In this implementation, a <strong>Cardiovascular Digital Twin</strong> is defined as a personalized, computational software avatar of an individual's cardiovascular state that continuously integrates two complementary data streams:
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <span className="font-bold text-teal-300 text-sm block">1. Static Baseline EHR Context</span>
-            <p className="text-slate-400 text-[11px] leading-relaxed">
-              Provides the anatomical and chronic vulnerability baseline: chronological age, sex, body mass index (BMI), diagnosed hypertension, type 2 diabetes status, baseline ambulatory systolic/diastolic BP, serum lipids (LDL, HDL), and renal filtration rate (eGFR).
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <span className="font-bold text-cyan-300 text-sm block">2. Dynamic Wearable Telemetry</span>
-            <p className="text-slate-400 text-[11px] leading-relaxed">
-              Provides high-frequency autonomic and hemodynamic signals: instantaneous heart rate, Root Mean Square of Successive Differences (HRV RMSSD in ms), nocturnal sleep duration, actigraphy step intensity, and derived rolling rate-pressure indexes.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Ethical Safeguards, Privacy, and Honest Reporting */}
-      <div className="glass-panel p-6 border-slate-800 space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-emerald-400" />
-          <span>Ethical Safeguards & Privacy Guarantees</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-300">
-              <Lock className="w-4 h-4 text-emerald-400" />
-              <span>100% Synthetic Data</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Zero Protected Health Information (PHI) or real human records were utilized. All profiles are generated deterministically under fixed random seeds.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Local Execution</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Zero external cloud, LLM, or paid API dependencies. The entire system executes locally via open-source FastAPI and React.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>No Medical Overclaiming</span>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Explicitly framed as an academic simulation. Does not claim to diagnose disease, predict heart attacks, or replace board-certified cardiologists.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Path to Future Clinical Validation */}
-      <div className="glass-panel p-6 border-slate-800 space-y-3 text-xs text-slate-300">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider text-slate-200">
-          Required Prerequisites for Future Clinical Translation
-        </h3>
-        <ol className="list-decimal list-inside space-y-1.5 text-slate-400 text-[11px] leading-relaxed">
-          <li><strong>Prospective Clinical Trials:</strong> Validation across diverse multi-center inpatient and outpatient clinical registries with institutional review board (IRB) ethical approval.</li>
-          <li><strong>Medical Grade Sensor Calibration:</strong> Benchmarking commercial photoplethysmography (PPG) wearable sensors against gold-standard 12-lead Holter electrocardiograms.</li>
-          <li><strong>Demographic Representation:</strong> Calibrating risk distributions against large-scale epidemiological cohorts representative of the Indian population (e.g., ICMR cardiovascular databases).</li>
-          <li><strong>Regulatory Clearance:</strong> Rigorous software as a medical device (SaMD) documentation compliant with CDSCO and FDA 510(k) standards.</li>
-        </ol>
-      </div>
-
-      {/* Deliverable Artifacts & Project Repository */}
-      <div className="glass-panel p-5 border-slate-800 bg-slate-900/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Title & Sub-tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
         <div>
-          <h4 className="text-sm font-bold text-white">Generated Submission Artifacts</h4>
-          <p className="text-xs text-slate-400">Access the architecture diagrams, presentation deck, and 20-minute demonstration package</p>
+          <h1 className="text-xl font-bold text-white tracking-tight">About & Model Details</h1>
+          <p className="text-xs text-slate-400">CardioTwin AI project overview, validation benchmarks, and explainability</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-mono text-teal-300 bg-teal-500/10 px-3 py-1.5 rounded border border-teal-500/30">
-            Open-Source MIT License
-          </span>
-          <span className="text-[11px] font-mono text-cyan-300 bg-cyan-500/10 px-3 py-1.5 rounded border border-cyan-500/30">
-            Full Python & TS Source Code
-          </span>
+
+        {/* Sub-section Switcher */}
+        <div className="inline-flex rounded-md bg-slate-900 p-0.5 border border-slate-800 text-xs">
+          <button
+            onClick={() => setSubSection("about")}
+            className={`px-3 py-1 rounded transition-colors ${
+              subSection === "about" ? "bg-slate-800 text-teal-300 font-medium" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setSubSection("evaluation")}
+            className={`px-3 py-1 rounded transition-colors ${
+              subSection === "evaluation" ? "bg-slate-800 text-teal-300 font-medium" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Model Evaluation
+          </button>
+          <button
+            onClick={() => setSubSection("explainability")}
+            className={`px-3 py-1 rounded transition-colors ${
+              subSection === "explainability" ? "bg-slate-800 text-teal-300 font-medium" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Explainability
+          </button>
         </div>
       </div>
+
+      {/* 1. About Overview */}
+      {subSection === "about" && (
+        <div className="space-y-4">
+          <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-white">Project Information</h2>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              CardioTwin AI is an academic proof-of-concept developed for the{" "}
+              <strong>Digital Twin Challenge 2026</strong> organized by <strong>Happiest Health</strong>. It explores how
+              fusing baseline EHR clinical records with continuous wearable sensor streams (Heart Rate, HRV RMSSD, Sleep,
+              and Steps) creates a personalized digital avatar that estimates short-term deterioration risk.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+              <div className="p-3 rounded bg-slate-900 border border-slate-800/80">
+                <span className="text-[11px] text-slate-400 block">Student Researcher</span>
+                <span className="font-semibold text-white mt-0.5 block">Madabattula Tejo Hasini</span>
+                <span className="text-[11px] text-slate-400">Solo Student Entry</span>
+              </div>
+              <div className="p-3 rounded bg-slate-900 border border-slate-800/80">
+                <span className="text-[11px] text-slate-400 block">Institution</span>
+                <span className="font-semibold text-white mt-0.5 block">Aditya University</span>
+                <span className="text-[11px] text-slate-400">Andhra Pradesh, India</span>
+              </div>
+              <div className="p-3 rounded bg-slate-900 border border-slate-800/80">
+                <span className="text-[11px] text-slate-400 block">Contact</span>
+                <a
+                  href="mailto:24b11ai223@adityauniversity.in"
+                  className="font-mono text-teal-400 hover:underline mt-0.5 block text-[11px]"
+                >
+                  24b11ai223@adityauniversity.in
+                </a>
+                <span className="text-[11px] text-slate-400">MIT Open-Source License</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Ethical Safeguards & Data Privacy</span>
+            </h2>
+            <div className="space-y-2 text-xs text-slate-300">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>100% Synthetic Data:</strong> Zero Protected Health Information (PHI) was used. All patient records
+                  and sensor signals are programmatically synthesized.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Local Execution:</strong> Operates entirely on the local machine without external cloud or paid LLM
+                  dependencies.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Not a Medical Device:</strong> Does not predict real-world heart attacks or recommend medical
+                  treatments.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Model Evaluation Sub-section */}
+      {subSection === "evaluation" && (
+        <div className="space-y-4">
+          <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Held-Out Patient Evaluation (N = 10 Patients, 1,110 Readings)</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Evaluated with zero patient-level overlap using GroupShuffleSplit.
+              </p>
+            </div>
+
+            {/* Metrics Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono text-slate-300">
+                <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 font-sans">
+                  <tr>
+                    <th className="py-2.5 px-3">Metric</th>
+                    <th className="py-2.5 px-3">Baseline (Logistic Regression)</th>
+                    <th className="py-2.5 px-3 text-teal-300">Comparison (Random Forest)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">ROC-AUC</td>
+                    <td className="py-2 px-3">{lr?.roc_auc.toFixed(4) ?? "0.8217"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.roc_auc.toFixed(4) ?? "0.9367"}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">Average Precision (PR-AUC)</td>
+                    <td className="py-2 px-3">{lr?.average_precision.toFixed(4) ?? "0.8233"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.average_precision.toFixed(4) ?? "0.8939"}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">F1-Score</td>
+                    <td className="py-2 px-3">{lr?.f1_score.toFixed(4) ?? "0.6733"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.f1_score.toFixed(4) ?? "0.8295"}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">Precision</td>
+                    <td className="py-2 px-3">{lr?.precision.toFixed(4) ?? "0.5551"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.precision.toFixed(4) ?? "0.7466"}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">Recall (Sensitivity)</td>
+                    <td className="py-2 px-3">{lr?.recall.toFixed(4) ?? "0.8553"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.recall.toFixed(4) ?? "0.9329"}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-sans text-white font-medium">Brier Calibration Score</td>
+                    <td className="py-2 px-3">{lr?.brier_score.toFixed(4) ?? "0.2373"}</td>
+                    <td className="py-2 px-3 text-teal-400 font-bold">{rf?.brier_score.toFixed(4) ?? "0.1221"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Confusion Matrix Breakdown */}
+            {rf && (
+              <div className="pt-3 border-t border-slate-800">
+                <span className="text-xs font-semibold text-slate-300 block mb-2">
+                  Random Forest Confusion Matrix (N = 1,110):
+                </span>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block">True Neg (TN)</span>
+                    <span className="font-bold text-white font-mono">{rf.confusion_matrix.true_negative}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block">False Pos (FP)</span>
+                    <span className="font-bold text-amber-400 font-mono">{rf.confusion_matrix.false_positive}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block">False Neg (FN)</span>
+                    <span className="font-bold text-rose-400 font-mono">{rf.confusion_matrix.false_negative}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block">True Pos (TP)</span>
+                    <span className="font-bold text-teal-400 font-mono">{rf.confusion_matrix.true_positive}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Explainability Sub-section */}
+      {subSection === "explainability" && (
+        <div className="space-y-4">
+          <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Top Predictive Features (Gini Importance)</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Relative contribution to the 24-hour synthetic deterioration proxy.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {report?.feature_importances.slice(0, 6).map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-slate-800/60">
+                  <span className="text-slate-300">{f.friendly_name}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-teal-400 h-full rounded-full" style={{ width: `${f.importance * 300}%` }}></div>
+                    </div>
+                    <span className="font-mono text-slate-400 w-12 text-right">
+                      {(f.importance * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 rounded bg-amber-950/20 border border-amber-900/40 text-xs text-amber-200/90 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Correlation vs. Causation:</strong> Feature weights describe mathematical association within the
+                training dataset. They do not prove clinical cause-and-effect.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

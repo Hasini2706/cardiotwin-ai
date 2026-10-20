@@ -1,18 +1,8 @@
-import React from "react";
-import { 
-  Users, 
-  Activity, 
-  Heart, 
-  Moon, 
-  ShieldCheck, 
-  ArrowRight, 
-  TrendingUp, 
-  Sparkles,
-  Clock,
-  CheckCircle2,
-  AlertCircle
-} from "lucide-react";
-import { PatientSummary } from "../types/api";
+import React, { useState, useEffect } from "react";
+import { ChevronDown, ArrowRight, Activity, Clock } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import type { PatientSummary, WearableReading } from "../types/api";
+import { apiService } from "../services/api";
 
 interface OverviewScreenProps {
   patients: PatientSummary[];
@@ -21,350 +11,272 @@ interface OverviewScreenProps {
   onNavigateTab: (tab: string) => void;
 }
 
+type MetricType = "heartRate" | "hrv" | "sleep" | "steps";
+
 export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   patients,
   selectedPatientId,
   onSelectPatient,
   onNavigateTab,
 }) => {
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>("heartRate");
+  const [readings, setReadings] = useState<WearableReading[]>([]);
+  const [loadingReadings, setLoadingReadings] = useState<boolean>(false);
+
   const selectedPatient = patients.find((p) => p.patient_id === selectedPatientId) || patients[0];
 
-  const totalPatients = patients.length;
-  const highRiskCount = patients.filter(
-    (p) => (p.latest_prediction?.rf_deterioration_prob ?? 0) >= 0.65
-  ).length;
-  const modRiskCount = patients.filter((p) => {
-    const prob = p.latest_prediction?.rf_deterioration_prob ?? 0;
-    return prob >= 0.30 && prob < 0.65;
-  }).length;
-  const lowRiskCount = totalPatients - highRiskCount - modRiskCount;
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrends() {
+      if (!selectedPatientId) return;
+      setLoadingReadings(true);
+      try {
+        const res = await apiService.getPatientWearables(selectedPatientId, 25);
+        if (isMounted) {
+          setReadings(res.readings);
+        }
+      } catch (err) {
+        console.error("Failed to load overview readings", err);
+      } finally {
+        if (isMounted) setLoadingReadings(false);
+      }
+    }
+    loadTrends();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPatientId]);
 
-  const avgHrv = Math.round(
-    patients.reduce((acc, p) => acc + (p.latest_reading?.hrv_rmssd_ms ?? 40), 0) / (totalPatients || 1)
-  );
+  const riskProb = selectedPatient?.latest_prediction?.rf_deterioration_prob ?? 0.15;
+  const riskCategory = selectedPatient?.latest_prediction?.risk_category ?? "Low";
+  const riskColor = riskProb >= 0.65 ? "#F87171" : riskProb >= 0.30 ? "#FBBF24" : "#34D399";
+  const badgeClass =
+    riskProb >= 0.65
+      ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+      : riskProb >= 0.30
+      ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+      : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+
+  // Chart data
+  const chartData = readings.map((r) => {
+    const d = new Date(r.timestamp);
+    const timeStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, "0")}:00`;
+    return {
+      time: timeStr,
+      heartRate: r.heart_rate_bpm,
+      hrv: r.hrv_rmssd_ms,
+      sleep: r.sleep_hours,
+      steps: r.steps_interval,
+    };
+  });
+
+  const metricConfig = {
+    heartRate: {
+      name: "Heart Rate",
+      unit: "bpm",
+      color: "#F87171",
+      dataKey: "heartRate",
+    },
+    hrv: {
+      name: "HRV (RMSSD)",
+      unit: "ms",
+      color: "#2DD4BF",
+      dataKey: "hrv",
+    },
+    sleep: {
+      name: "Sleep",
+      unit: "hours",
+      color: "#818CF8",
+      dataKey: "sleep",
+    },
+    steps: {
+      name: "Steps",
+      unit: "steps",
+      color: "#38BDF8",
+      dataKey: "steps",
+    },
+  }[selectedMetric];
+
+  // Latest reading info
+  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+  const latestTimeStr = latest?.timestamp
+    ? new Date(latest.timestamp).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+      })
+    : "Recently synced";
 
   return (
-    <div className="space-y-6">
-      {/* Hero Welcome & Challenge Context */}
-      <div className="glass-panel p-6 border-slate-700/60 bg-gradient-to-br from-slate-900/90 via-[#0C152B]/80 to-slate-900/90 relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="max-w-3xl space-y-2">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              Digital Twin Challenge 2026 • Happiest Health Submission
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold text-white tracking-tight">CardioTwin AI</h1>
+        <p className="text-sm text-slate-400">A smarter way to explore cardiovascular health</p>
+        <p className="text-xs text-slate-500">Research prototype using synthetic data. Not for medical use.</p>
+      </div>
+
+      {/* Main Patient Card */}
+      <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <select
+                value={selectedPatientId}
+                onChange={(e) => onSelectPatient(e.target.value)}
+                className="appearance-none bg-slate-900 border border-slate-700 rounded-md pl-3 pr-8 py-1.5 text-sm font-semibold text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+              >
+                {patients.map((p) => (
+                  <option key={p.patient_id} value={p.patient_id}>
+                    {p.patient_id}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              CardioTwin AI: Virtual Cardiovascular Patient Laboratory
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Fusing synthetic electronic health records (EHR) with time-series wearable telemetry (Heart Rate, HRV RMSSD, Sleep, Steps) to generate a personalized digital twin. Features algorithmic 24-hour deterioration risk forecasting and interactive counterfactual simulation.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => onNavigateTab("digital-twin")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-500 text-slate-950 font-semibold text-xs hover:bg-teal-400 transition-all shadow-[0_0_15px_rgba(45,212,191,0.25)]"
-            >
-              <span>Inspect Digital Twin</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onNavigateTab("simulation")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 font-medium text-xs hover:bg-slate-700 transition-all"
-            >
-              <span>Live Simulation Lab</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Cohort KPI Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-panel p-4 border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Synthetic Cohort Size</span>
-            <Users className="w-4 h-4 text-teal-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-white">{totalPatients}</span>
-            <span className="text-xs text-slate-400">Virtual Twins</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Multi-day longitudinal profiles</p>
-        </div>
-
-        <div className="glass-panel p-4 border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Outcome Prevalence</span>
-            <TrendingUp className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-400">
-              {totalPatients ? `${Math.round(((highRiskCount + modRiskCount) / totalPatients) * 100)}%` : "29%"}
+            <span className="text-sm text-slate-300">
+              Age: <strong className="text-white">{selectedPatient?.age ?? "--"}</strong>
             </span>
-            <span className="text-xs text-slate-400">synthetic event risk</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">24-hour deterioration proxy</p>
-        </div>
 
-        <div className="glass-panel p-4 border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Cohort Mean HRV</span>
-            <Heart className="w-4 h-4 text-rose-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-white">{avgHrv}</span>
-            <span className="text-xs text-slate-400">RMSSD (ms)</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Parasympathetic autonomic tone</p>
-        </div>
-
-        <div className="glass-panel p-4 border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Model Verification</span>
-            <ShieldCheck className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-cyan-400">0.9367</span>
-            <span className="text-xs text-slate-400">ROC-AUC</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Held-out test patients (Random Forest)</p>
-        </div>
-      </div>
-
-      {/* Two Column Layout: Selected Patient Card & Cohort Risk Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Selected Patient Digital Twin Snapshot */}
-        <div className="glass-panel p-5 border-slate-700/80 lg:col-span-1 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-400">Active Digital Twin</span>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>{selectedPatient?.patient_id}</span>
-                  <span className="text-xs font-normal text-slate-400">({selectedPatient?.age}y, {selectedPatient?.sex})</span>
-                </h3>
-              </div>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                (selectedPatient?.latest_prediction?.rf_deterioration_prob ?? 0) >= 0.65
-                  ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                  : (selectedPatient?.latest_prediction?.rf_deterioration_prob ?? 0) >= 0.30
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-              }`}>
-                {selectedPatient?.latest_prediction?.risk_category ?? "Low"} Risk
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">Experimental Risk Score:</span>
+              <span className="text-lg font-bold font-mono" style={{ color: riskColor }}>
+                {Math.round(riskProb * 100)}%
               </span>
             </div>
-
-            {/* Quick Metrics */}
-            <div className="mt-4 space-y-3">
-              <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400">24h Deterioration Proxy Score:</span>
-                  <span className="text-base font-bold text-white">
-                    {Math.round((selectedPatient?.latest_prediction?.rf_deterioration_prob ?? 0.15) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2 mt-2 overflow-hidden">
-                  <div 
-                    className="h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.round((selectedPatient?.latest_prediction?.rf_deterioration_prob ?? 0.15) * 100)}%`,
-                      backgroundColor: selectedPatient?.latest_prediction?.risk_color ?? "#34D399"
-                    }}
-                  ></div>
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                  <span>Safe</span>
-                  <span>Moderate</span>
-                  <span>Elevated Risk</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800/80">
-                  <span className="text-slate-400 block text-[11px]">Heart Rate</span>
-                  <span className="font-semibold text-slate-100 text-sm">
-                    {selectedPatient?.latest_reading?.heart_rate_bpm ?? 72} bpm
-                  </span>
-                </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800/80">
-                  <span className="text-slate-400 block text-[11px]">HRV RMSSD</span>
-                  <span className="font-semibold text-teal-300 text-sm">
-                    {selectedPatient?.latest_reading?.hrv_rmssd_ms ?? 45} ms
-                  </span>
-                </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800/80">
-                  <span className="text-slate-400 block text-[11px]">Est. Systolic BP</span>
-                  <span className="font-semibold text-slate-100 text-sm">
-                    {selectedPatient?.latest_reading?.estimated_systolic_bp ?? 124} mmHg
-                  </span>
-                </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800/80">
-                  <span className="text-slate-400 block text-[11px]">Hypertension</span>
-                  <span className="font-semibold text-slate-100 text-sm">
-                    {selectedPatient?.hypertension ? "Diagnosed" : "None"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-800">
-            <button
-              onClick={() => onNavigateTab("digital-twin")}
-              className="w-full py-2 px-3 rounded bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-semibold hover:bg-teal-500/25 transition-all text-center"
-            >
-              Open Full Patient Digital Twin →
-            </button>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium border ${badgeClass}`}>
+              {riskCategory}
+            </span>
           </div>
         </div>
 
-        {/* Cohort Risk Distribution & Stream Ticker */}
-        <div className="glass-panel p-5 border-slate-700/80 lg:col-span-2 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <h3 className="text-base font-bold text-white">Cohort Deterioration Risk Spectrum</h3>
-              <p className="text-xs text-slate-400">Distribution of 50 synthetic patients across risk categories</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span className="text-slate-300">Low: {lowRiskCount}</span>
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-400 ml-2"></span>
-              <span className="text-slate-300">Mod: {modRiskCount}</span>
-              <span className="inline-block w-2 h-2 rounded-full bg-rose-400 ml-2"></span>
-              <span className="text-slate-300">High: {highRiskCount}</span>
-            </div>
+        {/* Vital Signs Row */}
+        <div className="grid grid-cols-3 gap-4 py-4 text-center">
+          <div>
+            <span className="text-xs text-slate-400 block">Heart Rate</span>
+            <span className="text-lg font-semibold text-white font-mono mt-0.5 block">
+              {selectedPatient?.latest_reading?.heart_rate_bpm ?? "--"}{" "}
+              <span className="text-xs font-normal text-slate-500">bpm</span>
+            </span>
           </div>
+          <div>
+            <span className="text-xs text-slate-400 block">HRV (RMSSD)</span>
+            <span className="text-lg font-semibold text-teal-400 font-mono mt-0.5 block">
+              {selectedPatient?.latest_reading?.hrv_rmssd_ms ?? "--"}{" "}
+              <span className="text-xs font-normal text-slate-500">ms</span>
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-slate-400 block">Blood Pressure</span>
+            <span className="text-lg font-semibold text-white font-mono mt-0.5 block">
+              {selectedPatient?.baseline_systolic_bp ?? "--"}{" "}
+              <span className="text-xs font-normal text-slate-500">mmHg</span>
+            </span>
+          </div>
+        </div>
 
-          {/* Stacked Risk Proportion Bar */}
-          <div className="space-y-1.5">
-            <div className="h-4 w-full bg-slate-800 rounded-full flex overflow-hidden">
-              <div 
-                style={{ width: `${(lowRiskCount / (totalPatients || 1)) * 100}%` }} 
-                className="bg-emerald-500 h-full"
-                title={`Low Risk: ${lowRiskCount}`}
-              ></div>
-              <div 
-                style={{ width: `${(modRiskCount / (totalPatients || 1)) * 100}%` }} 
-                className="bg-amber-500 h-full"
-                title={`Moderate Risk: ${modRiskCount}`}
-              ></div>
-              <div 
-                style={{ width: `${(highRiskCount / (totalPatients || 1)) * 100}%` }} 
-                className="bg-rose-500 h-full"
-                title={`Elevated Risk: ${highRiskCount}`}
-              ></div>
-            </div>
-            <div className="flex justify-between text-[11px] text-slate-400">
-              <span>{Math.round((lowRiskCount / (totalPatients || 1)) * 100)}% Stable</span>
-              <span>{Math.round((modRiskCount / (totalPatients || 1)) * 100)}% Vigilance</span>
-              <span>{Math.round((highRiskCount / (totalPatients || 1)) * 100)}% Acute Deterioration Alert</span>
-            </div>
-          </div>
-
-          {/* Data Pipeline Provenance Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span>Synthetic EHR Data</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">Seed 42, 50 baseline profiles with clinical risk markers.</p>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span>Wearable Streams</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">5,600 simulated readings across 14 consecutive days.</p>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span>Zero Patient Leakage</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">GroupShuffleSplit validation on held-out test cohort.</p>
-            </div>
-          </div>
+        {/* Action Button */}
+        <div className="pt-3 border-t border-slate-800/80 flex justify-end">
+          <button
+            onClick={() => onNavigateTab("digital-twin")}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-medium transition-colors"
+          >
+            <span>View Patient Twin</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Cohort Explorer Patient Table */}
-      <div className="glass-panel p-5 border-slate-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-2">
-          <div>
-            <h3 className="text-base font-bold text-white">Cohort Virtual Patient Directory</h3>
-            <p className="text-xs text-slate-400">Select any virtual patient to examine their longitudinal digital twin</p>
+      {/* Wearable Trends */}
+      <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-white">Wearable Trends</h2>
+
+          {/* Simple Metric Selector */}
+          <div className="inline-flex rounded-md bg-slate-900 p-0.5 border border-slate-800">
+            {(["heartRate", "hrv", "sleep", "steps"] as MetricType[]).map((m) => {
+              const labels = {
+                heartRate: "Heart Rate",
+                hrv: "HRV",
+                sleep: "Sleep",
+                steps: "Steps",
+              };
+              const isSelected = selectedMetric === m;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setSelectedMetric(m)}
+                  className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                    isSelected
+                      ? "bg-slate-800 text-teal-300 font-medium"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {labels[m]}
+                </button>
+              );
+            })}
           </div>
-          <span className="text-xs text-slate-400 font-mono">Showing 15 of {totalPatients} synthetic patients</span>
         </div>
 
-        <div className="overflow-x-auto mt-3">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
-              <tr>
-                <th className="py-2.5 px-3">Patient ID</th>
-                <th className="py-2.5 px-3">Demographics</th>
-                <th className="py-2.5 px-3">Comorbidities</th>
-                <th className="py-2.5 px-3">Baseline SBP</th>
-                <th className="py-2.5 px-3">Latest HR / HRV</th>
-                <th className="py-2.5 px-3">24h Risk Score</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {patients.slice(0, 15).map((p) => {
-                const isSelected = p.patient_id === selectedPatientId;
-                const prob = p.latest_prediction?.rf_deterioration_prob ?? 0.1;
-                return (
-                  <tr 
-                    key={p.patient_id}
-                    className={`hover:bg-slate-800/40 transition-colors ${isSelected ? "bg-teal-500/10" : ""}`}
-                  >
-                    <td className="py-2.5 px-3 font-semibold text-white font-mono flex items-center gap-2">
-                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-teal-400"></span>}
-                      {p.patient_id}
-                    </td>
-                    <td className="py-2.5 px-3">{p.age}y • {p.sex} • BMI {p.bmi}</td>
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-1">
-                        {p.hypertension && <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px]">HTN</span>}
-                        {p.diabetes && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">T2D</span>}
-                        {!p.hypertension && !p.diabetes && <span className="text-slate-500">None</span>}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 font-mono">{p.baseline_systolic_bp} mmHg</td>
-                    <td className="py-2.5 px-3 font-mono">
-                      {p.latest_reading?.heart_rate_bpm ?? 72} bpm / <span className="text-teal-300">{p.latest_reading?.hrv_rmssd_ms ?? 45} ms</span>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                        prob >= 0.65 ? "bg-rose-500/20 text-rose-300" :
-                        prob >= 0.30 ? "bg-amber-500/20 text-amber-300" :
-                        "bg-emerald-500/20 text-emerald-300"
-                      }`}>
-                        {Math.round(prob * 100)}% ({p.latest_prediction?.risk_category ?? "Low"})
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      <button
-                        onClick={() => {
-                          onSelectPatient(p.patient_id);
-                          onNavigateTab("digital-twin");
-                        }}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-500/20 hover:text-teal-300 text-slate-300 text-[11px] font-medium border border-slate-700/80 transition-all"
-                      >
-                        Inspect Twin
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Clean Line Chart */}
+        <div className="h-56 w-full pt-1">
+          {loadingReadings ? (
+            <div className="h-full flex items-center justify-center text-xs text-slate-500">
+              Loading readings...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                <XAxis dataKey="time" stroke="#64748B" fontSize={10} tickLine={false} />
+                <YAxis stroke="#64748B" fontSize={10} tickLine={false} domain={["auto", "auto"]} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#0B1120",
+                    borderColor: "#334155",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                  }}
+                  formatter={(val: any) => [`${val} ${metricConfig.unit}`, metricConfig.name]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey={metricConfig.dataKey}
+                  stroke={metricConfig.color}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
+      </div>
+
+      {/* Recent Update Section */}
+      <div className="bg-[#0F172A] border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 text-xs text-slate-300">
+          <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+          <span>
+            Latest reading:{" "}
+            <strong className="text-white font-mono">
+              {latest?.heart_rate_bpm ?? 72} bpm, {latest?.hrv_rmssd_ms ?? 45} ms HRV
+            </strong>{" "}
+            <span className="text-slate-500">({latestTimeStr})</span>
+          </span>
+        </div>
+
+        <button
+          onClick={() => onNavigateTab("simulation")}
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-teal-500 hover:bg-teal-400 text-slate-950 font-semibold text-xs transition-colors shrink-0"
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>Simulate New Reading</span>
+        </button>
       </div>
     </div>
   );
