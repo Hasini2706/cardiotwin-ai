@@ -32,7 +32,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#070D1B] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#080D18] text-slate-100 flex flex-col font-sans">
       {/* Compact Navbar */}
       <Navbar 
         activeTab={activeTab} 
