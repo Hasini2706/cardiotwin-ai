@@ -41,7 +41,7 @@ export function App() {
       />
 
       {/* Main Workspace Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6">
         {backendStatus === "offline" && (
           <div className="mb-5 p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-200 text-xs flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-2.5">
@@ -87,7 +87,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-5 text-center text-xs text-slate-500">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[11px]">
             <span className="font-semibold text-slate-400">CardioTwin AI</span>
             <span>•</span>
