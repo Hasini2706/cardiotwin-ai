@@ -32,8 +32,8 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080D18] text-slate-100 flex flex-col font-sans">
-      {/* Compact Navbar */}
+    <div className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-rose-500/30 selection:text-white">
+      {/* Compact Cyber Navbar */}
       <Navbar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -41,18 +41,18 @@ export function App() {
       />
 
       {/* Main Workspace Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
         {backendStatus === "offline" && (
-          <div className="mb-5 p-3 rounded-md bg-amber-950/40 border border-amber-800 text-amber-200 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="mb-5 p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-200 text-xs flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Could not connect to backend at http://127.0.0.1:8000. Ensure server is active.</span>
             </div>
             <button 
               onClick={fetchPatientsList}
-              className="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-xs font-medium"
+              className="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-xs font-semibold transition-colors"
             >
-              Retry
+              Retry Connection
             </button>
           </div>
         )}
@@ -83,12 +83,24 @@ export function App() {
             onRefreshData={fetchPatientsList}
           />
         )}
-
       </main>
 
-
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-5 text-center text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="font-semibold text-slate-400">CardioTwin AI</span>
+            <span>•</span>
+            <span>Digital Twin Challenge 2026 (Happiest Health)</span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Aditya University • Solo Entry: Madabattula Tejo Hasini
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
 
 export default App;
+
